@@ -34,7 +34,7 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
     //cv::Vec3b pixelRGB = img.at<cv::Vec3b>(30, 4*64);
     //std::cout << (int)pixelRGB.val[0]<<" "<<(int)pixelRGB.val[1]<<" "<<(int)pixelRGB.val[2] << std::endl;
 
-    find_pricise_point_unmove(img);
+    //find_pricise_point_unmove(img);
 
     //std::cout<<transform_abstract_point((int)temp.x)<<" "<<transform_abstract_point((int)temp.y)<<std::endl;
     //std::cout<<temp.x<<" "<<temp.y<<std::endl;
