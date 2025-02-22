@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(answer)
+project(answer_infos)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -10,21 +10,23 @@ find_package(ament_cmake_auto REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
-find_package(answer_infos REQUIRED)
+
 ament_auto_find_build_dependencies()
 
-include_directories(${EIGEN3_INCLUDE_DIR})
-include_directories(include ${OpenCV_INCLUDE_DIRS})
-include_directories(include)
-include_directories(include msg_serializer thirdparty/serialib)
+file(
+       GLOB ${PROJECT_NAME}_msg_files
+       RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} msg/*
+)
 
-add_subdirectory(thirdparty/serialib)
-
-ament_auto_add_executable(example_test src/test.cpp)
-target_link_libraries(example_test serialib ${OpenCV_LIBS})
-
-ament_auto_add_executable(${PROJECT_NAME}_img src/image_handle/img_handle.cpp)
-target_link_libraries(${PROJECT_NAME}_img serialib ${OpenCV_LIBS})
+rosidl_generate_interfaces(
+        ${PROJECT_NAME}
+        "msg/RobotLocation.msg"
+        "msg/MapPoint.msg"
+        "msg/Map.msg"
+        "msg/MapAbstract.msg"
+        "msg/Point.msg"
+        DEPENDENCIES std_msgs
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -39,4 +41,3 @@ if(BUILD_TESTING)
 endif()
 
 ament_auto_package()
-
