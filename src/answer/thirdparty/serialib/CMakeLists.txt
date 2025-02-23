@@ -4,4 +4,4 @@ project(serialib)
 set(CMAKE_CXX_STANDARD 14)
 
 add_library(serialib serialib.cpp
-        ../../include/answer/img_handle.h)
+        )

@@ -1,9 +1,7 @@
 #include "answer/img_handle.h"
 #include <rclcpp/rclcpp.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.h>
-#include <cv_bridge/cv_bridge.h>
 #include<opencv2/highgui.hpp>
 #include<opencv2/opencv.hpp>
 #include<vector>
@@ -50,9 +48,17 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
 {
     answer_infos::msg::MapPoint map_unmove_point;
     answer_infos::msg::RobotLocation map_move_point;
-
     answer_infos::msg::Map map_data;
+    //要发布的信息：
+    //地图上不动点
+    //地图上移动的机器人
+    //地图概况
+
+    map_move_point.enemy.resize(2);
+
     map_data.map_abstract.resize(16);
+
+
     for (int i = 0; i < 16; i++) //地图探测
     {
         map_data.map_abstract[i].map_abstracts.resize(32);
@@ -68,7 +74,8 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
             }
         }
     }
-    RCLCPP_INFO(this->get_logger(),"map abstract map");
+
+
     for (int i = 0; i < 7; i++) {
 
         cv::Mat Mask;
@@ -125,21 +132,38 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
                 map_unmove_point.password.y=transform_abstract_point(my_points[0].point.y);
             continue;
             case 5://自己
-                //std::cout<<my_points[0].area<<std::endl;
-                    //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
-                    // map_move_point.myself.x=transform_abstract_point(my_points[0].point.x);
-                    // map_move_point.myself.y=transform_abstract_point(my_points[0].point.y);
-                    // map_move_point.myself_x=my_points[0].point.x;
-                    // map_move_point.myself_y=my_points[0].point.y;
+                    //std::cout<<my_points[0].area<<std::endl;
+                    std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
+                     map_move_point.myself.x=transform_abstract_point(my_points[0].point.x);
+                     map_move_point.myself.y=transform_abstract_point(my_points[0].point.y);
+                     map_move_point.myself_x=my_points[0].point.x;
+                     map_move_point.myself_y=my_points[0].point.y;
                     continue;
             case 6://敌人
-                std::cout<<my_points.size()<<std::endl;
+                int temp_num=0;//计数，记录录入的敌人信息
+                for (int h=0;h<my_points.size();h++)//处理多个返回值的情况
+                {
+                    if (my_points[h].point.x<=30 && temp_num == 0) {
+                        map_move_point.enemy[temp_num].x=transform_abstract_point(my_points[h].point.x);
+                        map_move_point.enemy[temp_num].y=transform_abstract_point(my_points[h].point.y);
+                        map_move_point.enemy_1_x=my_points[h].point.x;
+                        map_move_point.enemy_1_y=my_points[h].point.y;
+                        temp_num++;
+                    }
+                    else if (my_points[h].point.x<=30 && temp_num == 1){
+                        map_move_point.enemy[temp_num].x=transform_abstract_point(my_points[h].point.x);
+                        map_move_point.enemy[temp_num].y=transform_abstract_point(my_points[h].point.y);
+                        map_move_point.enemy_2_x=my_points[h].point.x;
+                        map_move_point.enemy_2_y=my_points[h].point.y;
+                    }
+                }
             continue;
 
         }
     }
-
-
+    //Map_move_Point_->publish(map_move_point);
+    //Map_unmove_Point_->publish(map_unmove_point);
+    //Map_data->publish(map_data);
 }
 
 std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Mat& img_find_point) //寻找点
@@ -157,7 +181,8 @@ std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Ma
     {
         colcor_select::point_and_area temp_contour;
         auto area=contourArea(contours[i]); //要返回面积以判断为入口还是出口
-        double peri = arcLength(contours[i], true);
+        if (area>300) {
+            double peri = arcLength(contours[i], true);
         approxPolyDP(contours[i], conPoly[i], 0.01 * peri, true);
         //std::cout << conPoly[0].size() << std::endl;
         boundRect[i] = boundingRect(conPoly[i]);//用矩形包括，中心即为其坐标
@@ -165,7 +190,8 @@ std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Ma
         myPoint.y = boundRect[i].y + boundRect[i].height / 2;
         temp_contour.area = area;//返回数值
         temp_contour.point=myPoint;
-        return_vector.push_back(temp_contour);
+        return_vector.push_back(temp_contour);  //将找到的情况放到容器中
+        }
     }
     return return_vector;
 }

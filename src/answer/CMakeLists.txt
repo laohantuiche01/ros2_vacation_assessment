@@ -15,19 +15,19 @@ ament_auto_find_build_dependencies()
 
 include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(include ${OpenCV_INCLUDE_DIRS})
-include_directories(include)
+include_directories(include )
 include_directories(include msg_serializer thirdparty/serialib)
 
 add_subdirectory(thirdparty/serialib)
 
 ament_auto_add_executable(example_test src/test.cpp)
-target_link_libraries(example_test serialib ${OpenCV_LIBS})
+target_link_libraries(example_test serialib ${OpenCV_LIBS} )
 
 ament_auto_add_executable(${PROJECT_NAME}_img src/image_handle/img_handle.cpp)
-target_link_libraries(${PROJECT_NAME}_img serialib ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME}_img serialib ${OpenCV_LIBS} )
 
 ament_auto_add_executable(${PROJECT_NAME}_algo src/Algorithm.cpp)
-target_link_libraries(${PROJECT_NAME}_algo serialib ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME}_algo serialib ${OpenCV_LIBS} )
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
