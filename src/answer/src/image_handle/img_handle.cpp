@@ -46,9 +46,7 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
 
 void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输出函数
 {
-    answer_infos::msg::MapPoint map_unmove_point;
-    answer_infos::msg::RobotLocation map_move_point;
-    answer_infos::msg::Map map_data;
+
     //要发布的信息：
     //地图上不动点
     //地图上移动的机器人
@@ -158,12 +156,11 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
                     }
                 }
             continue;
-
         }
     }
-    //Map_move_Point_->publish(map_move_point);
-    //Map_unmove_Point_->publish(map_unmove_point);
-    //Map_data->publish(map_data);
+    Map_move_Point_->publish(map_move_point);//发布消息
+    Map_unmove_Point_->publish(map_unmove_point);//发布消息
+    Map_data->publish(map_data);//发布消息
 }
 
 std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Mat& img_find_point) //寻找点

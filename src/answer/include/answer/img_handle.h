@@ -13,8 +13,7 @@
 #include "answer/packages_connect.h"
 #include<example_interfaces/msg/bool.hpp>
 #include<answer/colcor_select.h>
-#include <answer_infos/msg/detail/robot_location__struct.hpp>
-#include<answer_infos/msg/robot_location.hpp>
+#include <answer_infos/msg/robot_location.hpp>
 
 
 class ImageHandle: public rclcpp::Node{
@@ -27,9 +26,9 @@ public:
         );
     	PosePub=this->create_publisher<geometry_msgs::msg::Pose2D>("pose",10);
     	BoolPub=this->create_publisher<example_interfaces::msg::Bool>("shoot",10);
-    	//Map_unmove_Point_=this->create_publisher<answer_infos::msg::MapPoint>("map_point_",10);
-    	//Map_move_Point_=this->create_publisher<answer_infos::msg::RobotLocation>("map",10);
-    	//Map_data=this->create_publisher<answer_infos::msg::Map>("map_base",10);
+    	Map_unmove_Point_=this->create_publisher<answer_infos::msg::MapPoint>("map_point_",10);
+    	Map_move_Point_=this->create_publisher<answer_infos::msg::RobotLocation>("map",10);
+    	Map_data=this->create_publisher<answer_infos::msg::Map>("map_base",10);
 
     	timer=this->create_wall_timer(
     		std::chrono::seconds(1),
@@ -47,6 +46,9 @@ private:
 	rclcpp::TimerBase::SharedPtr timer;
 
 	cv::Mat img;
+	answer_infos::msg::MapPoint map_unmove_point;
+	answer_infos::msg::RobotLocation map_move_point;
+	answer_infos::msg::Map map_data;
 
 	void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) ;//接收到图像(测试)
 	void find_pricise_point_unmove(cv::Mat img_find_colcor) ;//确定精准的坐标
