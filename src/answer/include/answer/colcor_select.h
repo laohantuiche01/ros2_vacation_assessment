@@ -15,6 +15,12 @@ namespace colcor_select {
         {175,175,175},//背景 7
         {58,58,58}//墙 8
     };
+
+    struct point_and_area {
+        cv::Point point;
+        double area;
+    };
+
 }
 
 #endif //COLCOR_SELECT_H

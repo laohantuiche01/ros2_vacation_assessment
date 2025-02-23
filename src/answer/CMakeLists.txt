@@ -26,6 +26,9 @@ target_link_libraries(example_test serialib ${OpenCV_LIBS})
 ament_auto_add_executable(${PROJECT_NAME}_img src/image_handle/img_handle.cpp)
 target_link_libraries(${PROJECT_NAME}_img serialib ${OpenCV_LIBS})
 
+ament_auto_add_executable(${PROJECT_NAME}_algo src/Algorithm.cpp)
+target_link_libraries(${PROJECT_NAME}_algo serialib ${OpenCV_LIBS})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

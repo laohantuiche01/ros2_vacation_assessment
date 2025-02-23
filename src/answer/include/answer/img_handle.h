@@ -8,10 +8,13 @@
 #include<opencv2/opencv.hpp>
 #include<vector>
 #include<answer_infos/msg/map.hpp>
+#include<answer_infos/msg/map_point.hpp>
 #include<geometry_msgs/msg/pose2_d.hpp>
 #include "answer/packages_connect.h"
 #include<std_msgs/msg/bool.hpp>
 #include<example_interfaces/msg/bool.hpp>
+#include<answer/colcor_select.h>
+
 
 
 class ImageHandle: public rclcpp::Node{
@@ -36,20 +39,24 @@ private:
 	rclcpp::Publisher<answer_infos::msg::Map>::SharedPtr MapPub;//发送地图信息
 	rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr PosePub;
 	rclcpp::Publisher<example_interfaces::msg::Bool>::SharedPtr BoolPub;
+	rclcpp::Publisher<answer_infos::msg::MapPoint>::SharedPtr Map_unmove_Point;
 	rclcpp::TimerBase::SharedPtr timer;
+
+	cv::Mat img;
+
 	void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) ;//接收到图像(测试)
 	void find_pricise_point_unmove(cv::Mat img_find_colcor) ;//确定精准的坐标
-	cv::Point getContours(cv::Mat img_find_point) ; //得到大概轮廓，从而更好的找到点
+	std::vector<colcor_select::point_and_area> getContours(const cv::Mat& img_find_point) ; //得到大概轮廓，从而更好的找到点
 	int transform_abstract_point(int location) ; //转换成粗略的坐标
 	void build_Map(int x,int y);//构建地图
 	void publish_try() {
 		geometry_msgs::msg::Pose2D pose;
-		pose.set__x(1000);
-		pose.set__y(1000);
-		pose.set__theta(2);
-		// pose.x=1000;
-		// pose.y=1000;
-		// pose.theta=2;
+		// pose.set__x(1000);
+		// pose.set__y(1000);
+		// pose.set__theta(2);
+		pose.x=1000;
+		pose.y=1000;
+		pose.theta=2;
 		RCLCPP_INFO(this->get_logger(),"publish try");
 		PosePub->publish(pose);
 
@@ -57,6 +64,8 @@ private:
 		example_interfaces::msg::Bool msg_;
 		msg_.data=true;
 		BoolPub->publish(msg_);
+
+		find_pricise_point_unmove(img);
 	}
 };
 
