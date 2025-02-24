@@ -27,14 +27,14 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
     }
 
     //颜色匹配
-    //cv::line(img,cv::Point(0,14*64-20),cv::Point(3000,14*64-20),cv::Scalar(175,175,175),2);
+    //cv::line(img,cv::Point(0,14*64-20),cv::Point(3000,14*64-20),cv::Scalar(58,58,58),2);
 
     //灰度图的测试
     //cv::cvtColor(img,imgGtey,CV_BGR2GRAY);
 
     //找各个颜色的RGB值
-    //cv::Vec3b pixelRGB = img.at<cv::Vec3b>(30, 4*64);
-    //std::cout << (int)pixelRGB.val[0]<<" "<<(int)pixelRGB.val[1]<<" "<<(int)pixelRGB.val[2] << std::endl;
+    // cv::Vec3b pixelRGB = img.at<cv::Vec3b>(64*5+32, 4*64+32);
+    // std::cout << (int)pixelRGB.val[0]<<" "<<(int)pixelRGB.val[1]<<" "<<(int)pixelRGB.val[2] << std::endl;
 
     //find_pricise_point_unmove(img);
 
@@ -44,7 +44,7 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
     cv::waitKey(1);
 }
 
-void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输出函数
+void ImageHandle::find_pricise_point_unmove() //测试输出函数
 {
 
     //要发布的信息：
@@ -52,27 +52,7 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
     //地图上移动的机器人
     //地图概况
 
-    map_move_point.enemy.resize(2);
-
-    map_data.map_abstract.resize(16);
-
-
-    for (int i = 0; i < 16; i++) //地图探测
-    {
-        map_data.map_abstract[i].map_abstracts.resize(32);
-        for (int j = 0; j < 32; j++) //地图探测
-        {
-            cv::Vec3b pixelRGB = img_find_colcor.at<cv::Vec3b>(i * 64 + 32, j * 64 + 32);
-            if (pixelRGB[0] == 175 && pixelRGB[1] == 175 && pixelRGB[2] == 175) {
-                map_data.map_abstract[i].map_abstracts[j] = 0; //0为无障碍
-            } else if (pixelRGB[0] == 58 && pixelRGB[1] == 58 && pixelRGB[2] == 58) {
-                map_data.map_abstract[i].map_abstracts[j] = 1; //1为有障碍
-            } else {
-                map_data.map_abstract[i].map_abstracts[j] = -1; //-1为未知
-            }
-        }
-    }
-
+    RCLCPP_INFO(this->get_logger(),"find pricise point");
 
     for (int i = 0; i < 7; i++) {
 
@@ -81,13 +61,13 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
         cv::Scalar lower = cv::Scalar(colcor_select::myColcor[i][0], colcor_select::myColcor[i][1]-1, colcor_select::myColcor[i][2]);
         cv::Scalar upper = cv::Scalar(colcor_select::myColcor[i][0], colcor_select::myColcor[i][1]+1, colcor_select::myColcor[i][2]);
 
-        cv::inRange(img_find_colcor, lower, upper, Mask);
+        cv::inRange(img, lower, upper, Mask);
 
         std::vector<colcor_select::point_and_area> my_points = getContours(Mask);
 
         switch (i) {
             case 0://绿色传送门
-                if (my_points[0].area>1000) //发布者录入信息
+                if (my_points[0].area>500) //发布者录入信息
                     {
                     map_unmove_point.green_in.x=my_points[0].point.x;
                     map_unmove_point.green_in.y=my_points[0].point.y;
@@ -131,36 +111,38 @@ void ImageHandle::find_pricise_point_unmove(cv::Mat img_find_colcor) //测试输
             continue;
             case 5://自己
                     //std::cout<<my_points[0].area<<std::endl;
-                    std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
+                    //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
                      map_move_point.myself.x=transform_abstract_point(my_points[0].point.x);
                      map_move_point.myself.y=transform_abstract_point(my_points[0].point.y);
                      map_move_point.myself_x=my_points[0].point.x;
                      map_move_point.myself_y=my_points[0].point.y;
                     continue;
             case 6://敌人
+                map_move_point.enemy.resize(my_points.size()-1);
+                map_move_point.enemy_precise.resize(my_points.size()-1);
                 int temp_num=0;//计数，记录录入的敌人信息
                 for (int h=0;h<my_points.size();h++)//处理多个返回值的情况
                 {
-                    if (my_points[h].point.x<=30 && temp_num == 0) {
-                        map_move_point.enemy[temp_num].x=transform_abstract_point(my_points[h].point.x);
-                        map_move_point.enemy[temp_num].y=transform_abstract_point(my_points[h].point.y);
-                        map_move_point.enemy_1_x=my_points[h].point.x;
-                        map_move_point.enemy_1_y=my_points[h].point.y;
-                        temp_num++;
-                    }
-                    else if (my_points[h].point.x<=30 && temp_num == 1){
-                        map_move_point.enemy[temp_num].x=transform_abstract_point(my_points[h].point.x);
-                        map_move_point.enemy[temp_num].y=transform_abstract_point(my_points[h].point.y);
-                        map_move_point.enemy_2_x=my_points[h].point.x;
-                        map_move_point.enemy_2_y=my_points[h].point.y;
+                     if (my_points[h].point.x<=30 && temp_num == 0) {
+                         map_move_point.enemy[temp_num].x=transform_abstract_point(my_points[h].point.x);
+                         map_move_point.enemy[temp_num].y=transform_abstract_point(my_points[h].point.y);
+                         map_move_point.enemy_precise[temp_num].x=my_points[h].point.x;
+                         map_move_point.enemy_precise[temp_num].y=my_points[h].point.y;
+                         temp_num++;
+                     }
+                     else if (my_points[h].point.x<=30 && temp_num == 1){
+                         map_move_point.enemy[temp_num].x=transform_abstract_point(my_points[h].point.x);
+                         map_move_point.enemy[temp_num].y=transform_abstract_point(my_points[h].point.y);
+                         map_move_point.enemy_precise[temp_num].x=my_points[h].point.x;
+                         map_move_point.enemy_precise[temp_num].y=my_points[h].point.y;
                     }
                 }
             continue;
         }
     }
-    Map_move_Point_->publish(map_move_point);//发布消息
-    Map_unmove_Point_->publish(map_unmove_point);//发布消息
-    Map_data->publish(map_data);//发布消息
+     Map_move_Point_->publish(map_move_point);//发布消息
+     Map_unmove_Point_->publish(map_unmove_point);//发布消息
+
 }
 
 std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Mat& img_find_point) //寻找点
@@ -197,6 +179,51 @@ int ImageHandle::transform_abstract_point(int location) {
     int temp = location / 64;
     return temp + 1;
 }
+
+
+void ImageHandle::map_array_Initialization() //初始化地图数组
+{
+    for (int i=0;i<=32;i++) {
+        for (int j=0;j<=16;j++) {
+            map_array[i][j]= -1 ; //都是未知
+        }
+    }
+    RCLCPP_INFO(this->get_logger(), "map_array_Initialization");
+}
+
+void ImageHandle::map_array_update()  //更新地图数组
+{
+    for (int i=0;i<=31;i++) {
+        for (int j=0;j<=14;j++) {
+            cv::Vec3b pixelRGB = img.at<cv::Vec3b>(i * 64 + 32, j * 64 + 32);
+            if (pixelRGB[0] == 175 && pixelRGB[1] == 175 && pixelRGB[2] == 175 && map_array[i][j] == -1) {
+                map_array[i][j] = 0; //0为无障碍
+            } else if (pixelRGB[0] == 58 && pixelRGB[1] == 58 && pixelRGB[2] == 58 && map_array[i][j] == -1) {
+                map_array[i][j] = 1; //-1为未知
+                } else {
+                   map_array[i][j] = -1; //1为有障碍
+                }
+        }
+    }
+}
+
+
+void ImageHandle::mapInitialization() {
+    map_data.map_abstract.resize(33);
+    for (int i = 0; i <= 31; i++) //地图探测
+    {
+        map_data.map_abstract[i].map_abstracts.resize(17);
+        for (int j = 0; j <= 14; j++) //地图探测
+        {
+            map_data.map_abstract[i].map_abstracts[j]=map_array[i][j];
+            std::cout<<map_array[i][j]<<" ";
+        }
+        std::cout<<std::endl;
+    }
+    Map_data->publish(map_data);//发布消息
+}
+
+
 
 
 int main(int argc, char **argv) {
