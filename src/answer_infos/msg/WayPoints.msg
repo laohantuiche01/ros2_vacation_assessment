@@ -1,0 +1,1 @@
+Point[] way_points

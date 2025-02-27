@@ -25,6 +25,8 @@ rosidl_generate_interfaces(
         "msg/Map.msg"
         "msg/MapAbstract.msg"
         "msg/Point.msg"
+        "msg/WayPoints.msg"
+        "srv/IfCanGo.srv"
         DEPENDENCIES std_msgs
 )
 

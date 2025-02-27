@@ -1,0 +1,5 @@
+int8 point_x
+int8 point_y
+int8 dir
+---
+bool result_bool
