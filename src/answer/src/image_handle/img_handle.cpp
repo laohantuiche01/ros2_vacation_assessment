@@ -22,7 +22,14 @@ void ImageHandle::WayCallback(const answer_infos::srv::WayService::Request::Shar
     end_point.y = request->input_point[1].y;
 
     std::stack<cv::Point> tempstack;
-    tempstack = reflash_way(begin_point, end_point);
+    while (!tempstack.empty()) {
+        tempstack.pop();
+    }
+
+    reflesh_point();
+    std::cout << myself.x << " " << myself.y << std::endl;
+    tempstack = reflash_way(myself, end_point);
+
     int num_ji = 0; //计数器
     response->point_way.resize(tempstack.size()); //初始化大小
     while (!tempstack.empty()) //将路径参数传输到服务中
@@ -48,13 +55,13 @@ void ImageHandle::mapInitialization() {
 }
 
 bool ImageHandle::IfCanGo(cv::Point basicPoint, int PointDir) {
-    int tempx = (basicPoint.x-1) * 64 + 32 + 32 * direction::dir[PointDir][0]+1;
-    int tempy = (basicPoint.y-1) * 64 + 32 + 32 * direction::dir[PointDir][1]+1;
+    int tempx = (basicPoint.x - 1) * 64 + 32 + 32 * direction::dir[PointDir][0] + 2;
+    int tempy = (basicPoint.y - 1) * 64 + 32 + 32 * direction::dir[PointDir][1] + 2;
     cv::Vec3b pixelRGB = img.at<cv::Vec3b>(tempy, tempx);
 
-    if ((int) pixelRGB.val[0] == 175 && (int) pixelRGB.val[1] == 175 && (int) pixelRGB.val[2] == 175) {
-        return true;
-    } else { return false; }
+    if ((int) pixelRGB.val[0] == 58 && (int) pixelRGB.val[1] == 58 && (int) pixelRGB.val[2] == 58) {
+        return false;
+    } else { return true; }
 }
 
 
@@ -62,7 +69,7 @@ std::stack<cv::Point> ImageHandle::reflash_way(cv::Point beginPoint, cv::Point e
     std::queue<cv::Point> Point_queue;
     Point_queue.push(beginPoint);
     mapPoint[beginPoint.x][beginPoint.y] = 4;
-
+    mapInitialization();
     while (!Point_queue.empty()) //dfs找路
     {
         int x = Point_queue.front().x;
@@ -102,13 +109,6 @@ std::stack<cv::Point> ImageHandle::reflash_way(cv::Point beginPoint, cv::Point e
             break;
         }
     }
-    // while (!path.empty()) {
-    //     cv::Point cout_point = path.top();
-    //     cv::circle(img, cv::Point(cout_point.x * 64 + 32, cout_point.y * 64 + 32), 10, cv::Scalar(0, 0, 255), -1);
-    //     std::cout << cout_point.x << " " << cout_point.y << std::endl;
-    //     path.pop();
-    // }
-
     return path;
 }
 
@@ -116,30 +116,6 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
 {
     cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
     img = cv_ptr->image.clone();
-
-    //找到粗略的坐标
-    // for (int i = 0; i < 16; i++) {
-    //     cv::line(img, cv::Point(0, 64 * i), cv::Point(3000, 64 * i), cv::Scalar(0, 0, 255), 2);
-    // }
-    // for (int i = 0; i < 32; i++) {
-    //     cv::line(img, cv::Point(64 * i, 0), cv::Point(64 * i, 1000), cv::Scalar(0, 0, 255), 2);
-    // }
-
-    //颜色匹配
-    //cv::line(img,cv::Point(0,14*64-20),cv::Point(3000,14*64-20),cv::Scalar(58,58,58),2);
-
-    //灰度图的测试
-    //cv::cvtColor(img,imgGtey,CV_BGR2GRAY);
-
-    //找各个颜色的RGB值
-    // cv::Vec3b pixelRGB = img.at<cv::Vec3b>(64*5+32, 4*64+32);
-    // std::cout << (int)pixelRGB.val[0]<<" "<<(int)pixelRGB.val[1]<<" "<<(int)pixelRGB.val[2] << std::endl;
-
-    //find_pricise_point_unmove(img);
-
-    //std::cout<<transform_abstract_point((int)temp.x)<<" "<<transform_abstract_point((int)temp.y)<<std::endl;
-    //std::cout<<temp.x<<" "<<temp.y<<std::endl;
-    //cv::circle(img,cv::Point(160,0),10,cv::Scalar(0,0,255),-1);
     cv::imshow("image", img);
     cv::waitKey(1);
 }
@@ -214,6 +190,15 @@ void ImageHandle::find_pricise_point_unmove() //测试输出函数
     Map_unmove_Point_->publish(map_unmove_point); //发布消息
 }
 
+void ImageHandle::reflesh() {
+    while (1) {
+        reflesh_point();
+        RCLCPP_INFO(this->get_logger(), "(%d,%d)", myself.x, myself.y);
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+    }
+}
+
+
 void ImageHandle::reflesh_point() {
     answer_infos::msg::RobotLocation map_move_point;
     for (int i = 5; i < 7; i++) {
@@ -232,25 +217,31 @@ void ImageHandle::reflesh_point() {
             case 5: //自己
                 map_move_point.myself.x = transform_abstract_point(my_points_[0].point.x);
                 map_move_point.myself.y = transform_abstract_point(my_points_[0].point.y);
+                myself.x = transform_abstract_point(my_points_[0].point.x);
+                myself.y = transform_abstract_point(my_points_[0].point.y);
+                RCLCPP_INFO(this->get_logger(), "(%d,%d)", myself.x, myself.y);
                 map_move_point.myself_x = my_points_[0].point.x;
                 map_move_point.myself_y = my_points_[0].point.y;
                 continue;
             case 6: //敌人
-                map_move_point.enemy.resize(my_points_.size()-1);
-                map_move_point.enemy_precise.resize(my_points_.size()-1);
-                // std::cout << transform_abstract_point(my_points_[1].point.x) << " " << transform_abstract_point(
-                //     my_points_[1].point.y) << std::endl;
+                if (my_points_.size() == 1) {  }
+                else if ( my_points_.size() == 0 ) {}
+                else {
+                    map_move_point.enemy.resize(my_points_.size() - 1);
+                    map_move_point.enemy_precise.resize(my_points_.size() - 1);
+                    // std::cout << transform_abstract_point(my_points_[1].point.x) << " " << transform_abstract_point(
+                    //     my_points_[1].point.y) << std::endl;
 
-                RCLCPP_INFO(this->get_logger(), "%lu", my_points_.size());
-                int num_ji = 0;
-                for (int j = 0; j <= my_points_.size(); j++) //处理多个返回值的情况
-                {
-                    if (transform_abstract_point(my_points_[j].point.x) <= 30) {
-                        map_move_point.enemy[num_ji].x = transform_abstract_point(my_points_[j].point.x);
-                        map_move_point.enemy[num_ji].y = transform_abstract_point(my_points_[j].point.y);
-                        map_move_point.enemy_precise[num_ji].x = my_points_[j].point.x;
-                        map_move_point.enemy_precise[num_ji].y = my_points_[j].point.y;
-                        num_ji++;
+                    int num_ji = 0;
+                    for (int j = 0; j <= my_points_.size(); j++) //处理多个返回值的情况
+                    {
+                        if (transform_abstract_point(my_points_[j].point.x) <= 30) {
+                            map_move_point.enemy[num_ji].x = transform_abstract_point(my_points_[j].point.x);
+                            map_move_point.enemy[num_ji].y = transform_abstract_point(my_points_[j].point.y);
+                            map_move_point.enemy_precise[num_ji].x = my_points_[j].point.x;
+                            map_move_point.enemy_precise[num_ji].y = my_points_[j].point.y;
+                            num_ji++;
+                        }
                     }
                 }
         }

@@ -18,6 +18,7 @@
 #include <answer_infos/msg/robot_location.hpp>
 #include<answer_infos/srv/if_can_go.hpp>
 #include<answer_infos/srv/way_service.hpp>
+#include<example_interfaces/msg/int64.hpp>
 
 
 namespace direction {
@@ -34,15 +35,21 @@ class Algorithm : public rclcpp::Node {
 public:
     Algorithm(): Node("algo") {
         arrayInitialization();
-        PosePub=this->create_publisher<geometry_msgs::msg::Pose2D>("pose", 10);
-        way_service_client=this->create_client<answer_infos::srv::WayService>("WayPoints");
-        robot_sub=this->create_subscription<answer_infos::msg::RobotLocation>("map",
+        Int64Sub=this->create_subscription<example_interfaces::msg::Int64>("password_segment",
             10,
-            std::bind(&Algorithm::recieve_robot_location,this,std::placeholders::_1));
+            std::bind(&Algorithm::password_handle,this,std::placeholders::_1)
+            );
+        PosePub=this->create_publisher<geometry_msgs::msg::Pose2D>("pose", 10);
+        BoolPub = this->create_publisher<example_interfaces::msg::Bool>("shoot", 10);
+        way_service_client=this->create_client<answer_infos::srv::WayService>("WayPoints");
+
         map_point_sub=this->create_subscription<answer_infos::msg::MapPoint>("MapPoints",
             10,
             std::bind(&Algorithm::recieve_map_point,this,std::placeholders::_1));
-        timer = this->create_wall_timer(std::chrono::seconds(5),
+        robot_sub=this->create_subscription<answer_infos::msg::RobotLocation>("map",
+            10,
+            std::bind(&Algorithm::recieve_robot_location,this,std::placeholders::_1));
+        timer = this->create_wall_timer(std::chrono::milliseconds(1000),
                                          std::bind(&Algorithm::send_point, this)
         );
         // control_timer = this->create_wall_timer(std::chrono::seconds(1),
@@ -55,6 +62,7 @@ private:
     rclcpp::Client<answer_infos::srv::WayService>::SharedPtr way_service_client;
     rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr PosePub; //移动
     rclcpp::Publisher<example_interfaces::msg::Bool>::SharedPtr BoolPub; //攻击
+    rclcpp::Subscription<example_interfaces::msg::Int64>::SharedPtr Int64Sub;
     rclcpp::TimerBase::SharedPtr timer;
     rclcpp::TimerBase::SharedPtr control_timer;
 
@@ -63,15 +71,24 @@ private:
     cv::Point way_points[100];//储存路径
     std::queue<cv::Point> Point_queue;//储存路径
 
-    int q;
+    cv::Point decide_which_next();
 
-    void move(int dx, int dy);
+    int num=0;
+    int q;
+    int pause_condition=1;
+    int count_=0;
+    long int password[3];
+    bool check_if_right(cv::Point targetPoint);
+    void fight();
+    void password_handle(example_interfaces::msg::Int64 msg);
+    void move(int dx, int dy ,double dtheta);
     void arrayInitialization();
     void recieve_map_point(answer_infos::msg::MapPoint::SharedPtr msg);
     void recieve_robot_location(answer_infos::msg::RobotLocation::SharedPtr msg);
     void send_point();
     void way_handle(rclcpp::Client<answer_infos::srv::WayService>::SharedFuture msg);
-    void move_control();
+    void move_control(std::queue<cv::Point> Point_queue_);
+
 
 };
 
