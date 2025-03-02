@@ -17,6 +17,7 @@
 #include<answer/colcor_select.h>
 #include <answer_infos/msg/robot_location.hpp>
 #include<answer_infos/srv/if_can_go.hpp>
+#include<answer_infos/srv/way_service.hpp>
 
 
 namespace direction {
@@ -32,49 +33,46 @@ namespace direction {
 class Algorithm : public rclcpp::Node {
 public:
     Algorithm(): Node("algo") {
-        map_Initialization();
-        // map_point_sub = this->create_subscription<answer_infos::msg::MapPoint>("map_point_", 10,
-        //     std::bind(&Algorithm::callback_test_1,this, std::placeholders::_1)
-        //     );
-        if_can_go = create_client<answer_infos::srv::IfCanGo>("if_can_go");
-        timer = this->create_wall_timer(std::chrono::seconds(1),
-                                        std::bind(&Algorithm::callbask, this)
+        arrayInitialization();
+        PosePub=this->create_publisher<geometry_msgs::msg::Pose2D>("pose", 10);
+        way_service_client=this->create_client<answer_infos::srv::WayService>("WayPoints");
+        robot_sub=this->create_subscription<answer_infos::msg::RobotLocation>("map",
+            10,
+            std::bind(&Algorithm::recieve_robot_location,this,std::placeholders::_1));
+        map_point_sub=this->create_subscription<answer_infos::msg::MapPoint>("MapPoints",
+            10,
+            std::bind(&Algorithm::recieve_map_point,this,std::placeholders::_1));
+        timer = this->create_wall_timer(std::chrono::seconds(5),
+                                         std::bind(&Algorithm::send_point, this)
         );
+        // control_timer = this->create_wall_timer(std::chrono::seconds(1),
+        //     std::bind(&Algorithm::move_control, this));
     }
 
 private:
-    //std::vector<std::vector<cv::Point> > runing_way_function(cv::Point began_point, cv::Point end_point);
+    rclcpp::Subscription<answer_infos::msg::RobotLocation>::SharedPtr robot_sub;
     rclcpp::Subscription<answer_infos::msg::MapPoint>::SharedPtr map_point_sub; //受到图中不动点的坐标
-    rclcpp::Client<answer_infos::srv::IfCanGo>::SharedPtr if_can_go;
+    rclcpp::Client<answer_infos::srv::WayService>::SharedPtr way_service_client;
+    rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr PosePub; //移动
+    rclcpp::Publisher<example_interfaces::msg::Bool>::SharedPtr BoolPub; //攻击
     rclcpp::TimerBase::SharedPtr timer;
-    int remember_the_way[33][17]; //记录步数
-    bool judgment;
+    rclcpp::TimerBase::SharedPtr control_timer;
 
-    void map_Initialization();
+    cv::Point Points[20];//储存点的数组
+    cv::Point pricise[3];//精确坐标
+    cv::Point way_points[100];//储存路径
+    std::queue<cv::Point> Point_queue;//储存路径
 
-    void cout_map();
+    int q;
 
-    void update_basic_map();
+    void move(int dx, int dy);
+    void arrayInitialization();
+    void recieve_map_point(answer_infos::msg::MapPoint::SharedPtr msg);
+    void recieve_robot_location(answer_infos::msg::RobotLocation::SharedPtr msg);
+    void send_point();
+    void way_handle(rclcpp::Client<answer_infos::srv::WayService>::SharedFuture msg);
+    void move_control();
 
-    std::stack<cv::Point> reflash_map(cv::Point basic_point, cv::Point end_point);
-
-    void callback_test_1(const answer_infos::msg::MapPoint::SharedPtr msg) {
-        std::cout << msg->destination.x << " " << msg->destination.y << std::endl;
-    }
-
-    void callbask() {
-        std::stack<cv::Point> Point_queue;
-        Point_queue = reflash_map(cv::Point(5, 5), cv::Point(5, 10));
-//         while (!Point_queue.empty()) {
-//             cv::Point cout_point = Point_queue.top();
-//             std::cout << cout_point.x << " " << cout_point.y << std::endl;
-//             Point_queue.pop();
-//         }
-        RCLCPP_INFO(this->get_logger(), "callbask");
-    }
-
-    bool IfCanGo(int x, int y, int direction); //撞墙了没
-    void recive_bool(rclcpp::Client<answer_infos::srv::IfCanGo>::SharedFuture recive_msg);
 };
 
 

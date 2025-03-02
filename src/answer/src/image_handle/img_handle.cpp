@@ -10,23 +10,49 @@
 #include<answer_infos/msg/map_point.hpp>
 #include<answer_infos/msg/robot_location.hpp>
 #include<answer/Algorithm.h>
+#include <bits/fs_fwd.h>
+
+void ImageHandle::WayCallback(const answer_infos::srv::WayService::Request::SharedPtr request,
+                              const answer_infos::srv::WayService::Response::SharedPtr response) {
+    cv::Point begin_point;
+    cv::Point end_point;
+    begin_point.x = request->input_point[0].x;
+    begin_point.y = request->input_point[0].y;
+    end_point.x = request->input_point[1].x;
+    end_point.y = request->input_point[1].y;
+
+    std::stack<cv::Point> tempstack;
+    tempstack = reflash_way(begin_point, end_point);
+    int num_ji = 0; //计数器
+    response->point_way.resize(tempstack.size()); //初始化大小
+    while (!tempstack.empty()) //将路径参数传输到服务中
+    {
+        cv::Point temp_point;
+        temp_point.x = tempstack.top().x;
+        temp_point.y = tempstack.top().y;
+        std::cout << temp_point.x << " " << temp_point.y << std::endl;
+        response->point_way[num_ji].x = temp_point.x;
+        response->point_way[num_ji].y = temp_point.y;
+        num_ji++;
+        tempstack.pop();
+    }
+}
+
 
 void ImageHandle::mapInitialization() {
-    for (int i = 0; i <= 32; i++) {
-        for (int j = 0; j <= 16; j++) {
+    for (int i = 0; i < 32; i++) {
+        for (int j = 0; j < 16; j++) {
             mapPoint[i][j] = -1;
         }
     }
 }
 
 bool ImageHandle::IfCanGo(cv::Point basicPoint, int PointDir) {
-    int tempx=basicPoint.x * 64 + 32 + 32 * direction::dir[PointDir][0];
-    int tempy=basicPoint.y * 64 + 32 + 32 * direction::dir[PointDir][1];
+    int tempx = (basicPoint.x-1) * 64 + 32 + 32 * direction::dir[PointDir][0]+1;
+    int tempy = (basicPoint.y-1) * 64 + 32 + 32 * direction::dir[PointDir][1]+1;
     cv::Vec3b pixelRGB = img.at<cv::Vec3b>(tempy, tempx);
-    //cv::Vec3b pixelRGB1 = img.at<cv::Vec3b>(64*5, 64*2+32);
-    // std::cout << (int)pixelRGB1.val[0] << " " << (int)pixelRGB1.val[1] << " " << (int)pixelRGB1.val[2] << std::endl;
 
-    if ((int)pixelRGB.val[0] == 175 && (int)pixelRGB.val[1] ==175 && (int)pixelRGB.val[2] == 175) {
+    if ((int) pixelRGB.val[0] == 175 && (int) pixelRGB.val[1] == 175 && (int) pixelRGB.val[2] == 175) {
         return true;
     } else { return false; }
 }
@@ -47,52 +73,49 @@ std::stack<cv::Point> ImageHandle::reflash_way(cv::Point beginPoint, cv::Point e
             cv::Point temp_point;
             temp_point.x = x + direction::dir[i][0];
             temp_point.y = y + direction::dir[i][1];
-            if (IfCanGo(cv::Point(x,y), i) && mapPoint[temp_point.x][temp_point.y] == -1 &&
-                temp_point.x>=0 &&temp_point.y>=0 &&temp_point.x<32 &&temp_point.y<16) {
+            if (IfCanGo(cv::Point(x, y), i) && mapPoint[temp_point.x][temp_point.y] == -1 &&
+                temp_point.x >= 0 && temp_point.y >= 0 && temp_point.x < 32 && temp_point.y < 16) {
                 Point_queue.push(temp_point);
                 mapPoint[temp_point.x][temp_point.y] = i;
             }
         }
     }
-    RCLCPP_INFO(this->get_logger(), "remember_the_way");
+    if (mapPoint[endPoint.x][endPoint.y] == -1) {
+        RCLCPP_ERROR(this->get_logger(), "终点不可达");
+        return {};
+    }
+    //RCLCPP_INFO(this->get_logger(), "remember_the_way");
     std::stack<cv::Point> path;
     int temp_x = endPoint.x;
     int temp_y = endPoint.y;
     path.push(endPoint);
     while (temp_x != beginPoint.x || temp_y != beginPoint.y) {
+        int dir_ = mapPoint[temp_x][temp_y];
         cv::Point temp_point;
-        temp_point.x = temp_x - direction::dir[mapPoint[temp_x][temp_y]][0];
-        temp_point.y = temp_y - direction::dir[mapPoint[temp_x][temp_y]][1];
-        path.push(temp_point);
-        temp_x = temp_point.x;
-        temp_y = temp_point.y;
+        if (dir_ >= 0 && dir_ <= 3) {
+            temp_point.x = temp_x - direction::dir[dir_][0];
+            temp_point.y = temp_y - direction::dir[dir_][1];
+            path.push(temp_point);
+            temp_x = temp_point.x;
+            temp_y = temp_point.y;
+        } else {
+            break;
+        }
     }
-    while (!path.empty()) {
-        cv::Point cout_point = path.top();
-        cv::circle(img,cv::Point(cout_point.x*64+32,cout_point.y*64+32),10,cv::Scalar(0,0,255),-1);
-        std::cout << cout_point.x << " " << cout_point.y << std::endl;
-        path.pop();
-    }
+    // while (!path.empty()) {
+    //     cv::Point cout_point = path.top();
+    //     cv::circle(img, cv::Point(cout_point.x * 64 + 32, cout_point.y * 64 + 32), 10, cv::Scalar(0, 0, 255), -1);
+    //     std::cout << cout_point.x << " " << cout_point.y << std::endl;
+    //     path.pop();
+    // }
 
     return path;
 }
-
-
-void ImageHandle::IfCanGoCallback(const answer_infos::srv::IfCanGo::Request::SharedPtr request_,
-                                  const answer_infos::srv::IfCanGo::Response::SharedPtr response_) {
-    cv::Vec3b pixelRGB = img.at<cv::Vec3b>(request_->point_x * 64 + 32 + 32 * direction::dir[request_->dir][0],
-                                           request_->point_y * 64 + 32 + 32 * direction::dir[request_->dir][1]);
-    if (pixelRGB.val[0] == 58 && pixelRGB.val[1] == 58 && pixelRGB.val[2] == 58) {
-        response_->result_bool = false;
-    } else { response_->result_bool = true; }
-}
-
 
 void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //接收到图像(测试)
 {
     cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
     img = cv_ptr->image.clone();
-    //cv::Mat imgGtey;
 
     //找到粗略的坐标
     // for (int i = 0; i < 16; i++) {
@@ -127,10 +150,73 @@ void ImageHandle::find_pricise_point_unmove() //测试输出函数
     //地图上不动点
     //地图上移动的机器人
     //地图概况
+    if (!hasRun) {
+        for (int i = 0; i < 5; i++) {
+            cv::Mat Mask;
 
-    RCLCPP_INFO(this->get_logger(), "find pricise point");
+            cv::Scalar lower = cv::Scalar(colcor_select::myColcor[i][0], colcor_select::myColcor[i][1] - 1,
+                                          colcor_select::myColcor[i][2]);
+            cv::Scalar upper = cv::Scalar(colcor_select::myColcor[i][0], colcor_select::myColcor[i][1] + 1,
+                                          colcor_select::myColcor[i][2]);
 
-    for (int i = 0; i < 7; i++) {
+            cv::inRange(img, lower, upper, Mask);
+
+            std::vector<colcor_select::point_and_area> my_points = getContours(Mask);
+
+            switch (i) {
+                case 0: //绿色传送门
+                    if (my_points[0].area > 500) //发布者录入信息
+                    {
+                        map_unmove_point.green_in.x = my_points[0].point.x;
+                        map_unmove_point.green_in.y = my_points[0].point.y;
+                        map_unmove_point.green_out.x = my_points[1].point.x;
+                        map_unmove_point.green_out.y = my_points[1].point.y;
+                    }
+                    map_unmove_point.green_in.x = my_points[1].point.x;
+                    map_unmove_point.green_in.y = my_points[1].point.y;
+                    map_unmove_point.green_out.x = my_points[0].point.x;
+                    map_unmove_point.green_out.y = my_points[0].point.y;
+                    continue;
+                case 1: //紫色传送门
+                    if (my_points[0].area > 1000) {
+                        map_unmove_point.purple_in.x = my_points[0].point.x;
+                        map_unmove_point.purple_in.y = my_points[0].point.y;
+                        map_unmove_point.purple_out.x = my_points[1].point.x;
+                        map_unmove_point.purple_out.y = my_points[1].point.y;
+                    }
+                    map_unmove_point.purple_in.x = my_points[1].point.x;
+                    map_unmove_point.purple_in.y = my_points[1].point.y;
+                    map_unmove_point.purple_out.x = my_points[0].point.x;
+                    map_unmove_point.purple_out.y = my_points[0].point.y;
+                    continue;
+                case 2: //补给
+                    // std::cout<<my_points[0].area<<std::endl;
+                    //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
+                    map_unmove_point.recover.x = transform_abstract_point(my_points[0].point.x);
+                    map_unmove_point.recover.y = transform_abstract_point(my_points[0].point.y);
+                    continue;
+                case 3: //基地
+                    //std::cout<<my_points[0].area<<std::endl;
+                    //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
+                    map_unmove_point.destination.x = transform_abstract_point(my_points[0].point.x);
+                    map_unmove_point.destination.y = transform_abstract_point(my_points[0].point.y);
+                    continue;
+                case 4: //密码
+                    //std::cout<<my_points[0].area<<std::endl;
+                    //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
+                    map_unmove_point.password.x = transform_abstract_point(my_points[0].point.x);
+                    map_unmove_point.password.y = transform_abstract_point(my_points[0].point.y);
+                    continue;
+            }
+        }
+        hasRun = true;
+    }
+    Map_unmove_Point_->publish(map_unmove_point); //发布消息
+}
+
+void ImageHandle::reflesh_point() {
+    answer_infos::msg::RobotLocation map_move_point;
+    for (int i = 5; i < 7; i++) {
         cv::Mat Mask;
 
         cv::Scalar lower = cv::Scalar(colcor_select::myColcor[i][0], colcor_select::myColcor[i][1] - 1,
@@ -138,87 +224,40 @@ void ImageHandle::find_pricise_point_unmove() //测试输出函数
         cv::Scalar upper = cv::Scalar(colcor_select::myColcor[i][0], colcor_select::myColcor[i][1] + 1,
                                       colcor_select::myColcor[i][2]);
 
-        cv::inRange(img, lower, upper, Mask);
+        inRange(img, lower, upper, Mask);
 
-        std::vector<colcor_select::point_and_area> my_points = getContours(Mask);
+        std::vector<colcor_select::point_and_area> my_points_ = getContours(Mask);
 
         switch (i) {
-            case 0: //绿色传送门
-                if (my_points[0].area > 500) //发布者录入信息
-                {
-                    map_unmove_point.green_in.x = my_points[0].point.x;
-                    map_unmove_point.green_in.y = my_points[0].point.y;
-                    map_unmove_point.green_out.x = my_points[1].point.x;
-                    map_unmove_point.green_out.y = my_points[1].point.y;
-                }
-                map_unmove_point.green_in.x = my_points[1].point.x;
-                map_unmove_point.green_in.y = my_points[1].point.y;
-                map_unmove_point.green_out.x = my_points[0].point.x;
-                map_unmove_point.green_out.y = my_points[0].point.y;
-                continue;
-            case 1: //紫色传送门
-                if (my_points[0].area > 1000) {
-                    map_unmove_point.purple_in.x = my_points[0].point.x;
-                    map_unmove_point.purple_in.y = my_points[0].point.y;
-                    map_unmove_point.purple_out.x = my_points[1].point.x;
-                    map_unmove_point.purple_out.y = my_points[1].point.y;
-                }
-                map_unmove_point.purple_in.x = my_points[1].point.x;
-                map_unmove_point.purple_in.y = my_points[1].point.y;
-                map_unmove_point.purple_out.x = my_points[0].point.x;
-                map_unmove_point.purple_out.y = my_points[0].point.y;
-                continue;
-            case 2: //补给
-                // std::cout<<my_points[0].area<<std::endl;
-                //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
-                map_unmove_point.recover.x = transform_abstract_point(my_points[0].point.x);
-                map_unmove_point.recover.y = transform_abstract_point(my_points[0].point.y);
-                continue;
-            case 3: //基地
-                //std::cout<<my_points[0].area<<std::endl;
-                //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
-                map_unmove_point.destination.x = transform_abstract_point(my_points[0].point.x);
-                map_unmove_point.destination.y = transform_abstract_point(my_points[0].point.y);
-                continue;
-            case 4: //密码
-                //std::cout<<my_points[0].area<<std::endl;
-                //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
-                map_unmove_point.password.x = transform_abstract_point(my_points[0].point.x);
-                map_unmove_point.password.y = transform_abstract_point(my_points[0].point.y);
-                continue;
             case 5: //自己
-                //std::cout<<my_points[0].area<<std::endl;
-                //std::cout<<transform_abstract_point(my_points[0].point.x)<<" "<<transform_abstract_point(my_points[0].point.y)<<std::endl;
-                map_move_point.myself.x = transform_abstract_point(my_points[0].point.x);
-                map_move_point.myself.y = transform_abstract_point(my_points[0].point.y);
-                map_move_point.myself_x = my_points[0].point.x;
-                map_move_point.myself_y = my_points[0].point.y;
+                map_move_point.myself.x = transform_abstract_point(my_points_[0].point.x);
+                map_move_point.myself.y = transform_abstract_point(my_points_[0].point.y);
+                map_move_point.myself_x = my_points_[0].point.x;
+                map_move_point.myself_y = my_points_[0].point.y;
                 continue;
             case 6: //敌人
-                map_move_point.enemy.resize(my_points.size() - 1);
-                map_move_point.enemy_precise.resize(my_points.size() - 1);
-                int temp_num = 0; //计数，记录录入的敌人信息
-                for (int h = 0; h < my_points.size(); h++) //处理多个返回值的情况
+                map_move_point.enemy.resize(my_points_.size()-1);
+                map_move_point.enemy_precise.resize(my_points_.size()-1);
+                // std::cout << transform_abstract_point(my_points_[1].point.x) << " " << transform_abstract_point(
+                //     my_points_[1].point.y) << std::endl;
+
+                RCLCPP_INFO(this->get_logger(), "%lu", my_points_.size());
+                int num_ji = 0;
+                for (int j = 0; j <= my_points_.size(); j++) //处理多个返回值的情况
                 {
-                    if (my_points[h].point.x <= 30 && temp_num == 0) {
-                        map_move_point.enemy[temp_num].x = transform_abstract_point(my_points[h].point.x);
-                        map_move_point.enemy[temp_num].y = transform_abstract_point(my_points[h].point.y);
-                        map_move_point.enemy_precise[temp_num].x = my_points[h].point.x;
-                        map_move_point.enemy_precise[temp_num].y = my_points[h].point.y;
-                        temp_num++;
-                    } else if (my_points[h].point.x <= 30 && temp_num == 1) {
-                        map_move_point.enemy[temp_num].x = transform_abstract_point(my_points[h].point.x);
-                        map_move_point.enemy[temp_num].y = transform_abstract_point(my_points[h].point.y);
-                        map_move_point.enemy_precise[temp_num].x = my_points[h].point.x;
-                        map_move_point.enemy_precise[temp_num].y = my_points[h].point.y;
+                    if (transform_abstract_point(my_points_[j].point.x) <= 30) {
+                        map_move_point.enemy[num_ji].x = transform_abstract_point(my_points_[j].point.x);
+                        map_move_point.enemy[num_ji].y = transform_abstract_point(my_points_[j].point.y);
+                        map_move_point.enemy_precise[num_ji].x = my_points_[j].point.x;
+                        map_move_point.enemy_precise[num_ji].y = my_points_[j].point.y;
+                        num_ji++;
                     }
                 }
-                continue;
         }
     }
     Map_move_Point_->publish(map_move_point); //发布消息
-    Map_unmove_Point_->publish(map_unmove_point); //发布消息
 }
+
 
 std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Mat &img_find_point) //寻找点
 {
