@@ -75,7 +75,7 @@ private:
 
     int num=0;
     int decide_if_go_to_recover=0;
-    int decide_if_go_to_recover_again=0;
+    int decide_if_go_to_recover_again=1;
     int green_or_purple_=1;
     int has_in=0;//是否已经进入传送门
     int has_gone_password=0;

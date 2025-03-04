@@ -57,7 +57,8 @@ namespace ms {
             }
             memcpy((void*)(s.data()+sizeof(Head)+sizeof(T)), &tail, sizeof(Tail));
 
-            return std::move(s);
+            //return std::move(s);
+            return s;
         }
 
         std::string serialize(Head head, std::string& t, Tail tail=Tail{}) {

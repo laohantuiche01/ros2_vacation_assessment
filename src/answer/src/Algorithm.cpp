@@ -1,8 +1,15 @@
 #include<answer/Algorithm.h>
 #include<rclcpp/rclcpp.hpp>
 #include<opencv2/opencv.hpp>
+#include<serialPro/robotComm.h>
 #include<queue>
 #include<stack>
+
+robot::RobotSerial my_serial;
+
+message_data password_send{
+    int64 password_will_send = 0;
+};
 
 void Algorithm::move_control(std::queue<cv::Point> Point_queue_) {
     if (Points[7].x == Points[8].x && Points[7].y == Points[8].y) {
@@ -79,7 +86,7 @@ void Algorithm::fight(int is_who) {
     double theta = atan2(dy, dx);
     move(0, 0, theta);
     while (num_ji != 2) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
         num_ji++;
         BoolPub->publish(fire);
     }
@@ -129,7 +136,6 @@ void Algorithm::recieve_map_point(answer_infos::msg::MapPoint::SharedPtr msg) //
 
 void Algorithm::recieve_robot_location(answer_infos::msg::RobotLocation::SharedPtr msg) //更新位置
 {
-    auto request = msg.get();
     Points[7].x = msg->myself.x;
     Points[7].y = msg->myself.y;
     pricise[0].x = msg->myself_x;
@@ -173,10 +179,10 @@ void Algorithm::send_point() //发送给处理器的
 }
 
 cv::Point Algorithm::decide_which_next() {
-    RCLCPP_INFO(this->get_logger(), "decide_which_next");
+    //RCLCPP_INFO(this->get_logger(), "decide_which_next");
     if (aneme_size == 2) //省两个敌人
     {
-        RCLCPP_INFO(this->get_logger(), "fight to enemy1");
+        //RCLCPP_INFO(this->get_logger(), "fight to enemy1");
         return Points[9];
     }
     if (aneme_size == 1) //剩一个敌人
@@ -186,13 +192,14 @@ cv::Point Algorithm::decide_which_next() {
             if (Points[7].x == Points[1].x && Points[7].y == Points[1].y) //到了变换条件
             {
                 decide_if_go_to_recover = 1;
+                return Points[1];
             }
             if (decide_if_go_to_recover == 0) {
-                RCLCPP_INFO(this->get_logger(), "first to recover");
+                //RCLCPP_INFO(this->get_logger(), "first to recover");
                 return Points[1]; //回到治疗点
             }
         }
-        RCLCPP_INFO(this->get_logger(), "fight to enemy2");
+        //RCLCPP_INFO(this->get_logger(), "fight to enemy2");
         return Points[8]; //找第二个敌人
     }
     if (aneme_size == 0) //没敌人了
@@ -201,7 +208,7 @@ cv::Point Algorithm::decide_which_next() {
             if (Points[7].x == Points[1].x && Points[7].y == Points[1].y) {
                 decide_if_go_to_recover_again = 1;
             } else {
-                RCLCPP_INFO(this->get_logger(), "second to recover");
+                //RCLCPP_INFO(this->get_logger(), "second to recover");
                 return Points[1];
             }
         }
@@ -210,16 +217,20 @@ cv::Point Algorithm::decide_which_next() {
             {
                 if (green_or_purple_ == 0) //紫色进
                 {
-                    if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) has_in = 1; //是否到达了
+                    if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) {
+                        has_in = 1; //是否到达了
+                    }
                     if (has_in == 0) {
-                        RCLCPP_INFO(this->get_logger(), "go to pur_in");
+                        //RCLCPP_INFO(this->get_logger(), "go to pur_in");
                         return Points[5]; //没到的话，返回pur in坐标
                     }
                 } else if (green_or_purple_ == 1) //绿色进
                 {
-                    if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) has_in = 1; //是否到达了
+                    if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) {
+                        has_in = 1; //是否到达了
+                    }
                     if (has_in == 0) {
-                        RCLCPP_INFO(this->get_logger(), "go to gre_in");
+                        //RCLCPP_INFO(this->get_logger(), "go to gre_in");
                         return Points[3]; //没到的话，返回gre in坐标
                     }
                 }
@@ -229,12 +240,12 @@ cv::Point Algorithm::decide_which_next() {
                 {
                     if (Points[7].x == Points[2].x && Points[7].y == Points[2].y) {
                         has_gone_password = 1;
-                        example_interfaces::msg::Int64 temp;
-                        temp.data = password[2];
-                        Int64Pub->publish(temp);
-                        RCLCPP_INFO(this->get_logger(), "password changed");
+                        my_serial = std::move(robot::RobotSerial("/dev/pts/3",115200));
+                        my_serial.write(0x01,password_send{password[2]});
+                        std::cout<<password[2]<<std::endl;
+                        //RCLCPP_INFO(this->get_logger(), "password changed");
                     } else if (has_gone_password == 0) {
-                        RCLCPP_INFO(this->get_logger(), "go to password");
+                        //RCLCPP_INFO(this->get_logger(), "go to password");
                         return Points[2]; //如果没到，就返回其值
                     }
                 }
@@ -244,23 +255,27 @@ cv::Point Algorithm::decide_which_next() {
                     {
                         if (green_or_purple_ == 0) //绿色出
                         {
-                            if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) has_gone_out = 1; //是否到达了
+                            if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) {
+                                has_gone_out = 1; //是否到达了
+                            }
                             if (has_gone_out == 0) {
-                                RCLCPP_INFO(this->get_logger(), "go to gre_out");
+                                //RCLCPP_INFO(this->get_logger(), "go to gre_out");
                                 return Points[3]; //没到的话，返回pur in坐标
                             }
                         } else if (green_or_purple_ == 1) //紫色出
                         {
-                            if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) has_gone_out = 1; //是否到达了
+                            if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) {
+                                has_gone_out = 1; //是否到达了
+                            }
                             if (has_gone_out == 0) {
-                                RCLCPP_INFO(this->get_logger(), "go to pur_out");
+                                //RCLCPP_INFO(this->get_logger(), "go to pur_out");
                                 return Points[5]; //没到的话，返回gre in坐标
                             }
                         }
                     } else if (has_gone_out == 1) {
                         if (Points[7].x == Points[0].x && Points[7].y == Points[0].y) {
-                            RCLCPP_INFO(this->get_logger(), "has reach the basic");
-                            if (has_fire <= 8) {
+                            //RCLCPP_INFO(this->get_logger(), "has reach the basic");
+                            if (has_fire <= 20) {
                                 move(0, 0, 0);
                                 example_interfaces::msg::Bool fire;
                                 fire.data = true;
@@ -268,7 +283,7 @@ cv::Point Algorithm::decide_which_next() {
                                 has_fire ++;
                             }
                         } else {
-                            RCLCPP_INFO(this->get_logger(), "go to basic");
+                            //RCLCPP_INFO(this->get_logger(), "go to basic");
                             return Points[0];
                         }
                     }
@@ -276,6 +291,7 @@ cv::Point Algorithm::decide_which_next() {
             }
         }
     }
+    return Points[7];
 }
 
 
@@ -285,9 +301,9 @@ void Algorithm::way_handle(rclcpp::Client<answer_infos::srv::WayService>::Shared
     while (!Point_queue.empty()) {
         Point_queue.pop();
     }
-    RCLCPP_INFO(this->get_logger(), "Got the way");
+    //RCLCPP_INFO(this->get_logger(), "Got the way");
     if (result->point_way.size() > 0) {
-        for (int i = 0; i <= result->point_way.size() - 1; i++) {
+        for (u_int i = 0; i <= result->point_way.size() - 1; i++) {
             cv::Point p;
             p.x = result->point_way[i].x;
             p.y = result->point_way[i].y;

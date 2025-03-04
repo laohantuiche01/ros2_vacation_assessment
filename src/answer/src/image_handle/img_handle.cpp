@@ -122,8 +122,8 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
 {
     cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
     img = cv_ptr->image.clone();
-    cv::imshow("image", img);
-    cv::waitKey(1);
+    // cv::imshow("image", img);
+    // cv::waitKey(1);
 }
 
 void ImageHandle::find_pricise_point_unmove() //测试输出函数
@@ -232,7 +232,7 @@ void ImageHandle::reflesh_point() {
                     map_move_point.enemy.resize(my_points_.size() - 1);
                     map_move_point.enemy_precise.resize(my_points_.size() - 1);
                     int num_ji = 0;
-                    for (int j = 0; j <= my_points_.size(); j++) //处理多个返回值的情况
+                    for (u_int j = 0; j <= my_points_.size(); j++) //处理多个返回值的情况
                     {
                         if (transform_abstract_point(my_points_[j].point.x) <= 30) {
                             map_move_point.enemy[num_ji].x = transform_abstract_point(my_points_[j].point.x);
@@ -259,7 +259,7 @@ std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Ma
     std::vector<cv::Rect> boundRect(contours.size()); //用长方形框选以确定其中心
     cv::Point myPoint(0, 0);
 
-    for (int i = 0; i < contours.size(); i++) //处理如果有多个颜色的情况，用vector承载
+    for (u_int i = 0; i < contours.size(); i++) //处理如果有多个颜色的情况，用vector承载
     {
         colcor_select::point_and_area temp_contour;
         auto area = contourArea(contours[i]); //要返回面积以判断为入口还是出口

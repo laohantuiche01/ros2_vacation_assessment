@@ -41,13 +41,13 @@ namespace ms {
         return ucCRC8;
     }
 
-    static uint8_t sum8check(const uint8_t *data, int length) {
-        uint8_t sumCheck = 0;
-        for (int i = 0; i < length; ++i) {
-            sumCheck += data[i];
-        }
-        return sumCheck;
-    }
+    // static uint8_t sum8check(const uint8_t *data, int length) {
+    //     uint8_t sumCheck = 0;
+    //     for (int i = 0; i < length; ++i) {
+    //         sumCheck += data[i];
+    //     }
+    //     return sumCheck;
+    // }
 
     const uint16_t CRC16_INIT = 0xffff;
     const uint16_t wCRC_Table[256] = {
@@ -85,26 +85,26 @@ namespace ms {
         0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
     };
 
-    static uint16_t crc16check(const uint8_t *data, int length) {
-        uint8_t chData;
-        uint16_t wCRC = CRC16_INIT;
-        if (data == nullptr) {
-            return 0xFFFF;
-        }
-        while(length--) {
-            chData = *data++;
-            (wCRC) = ((uint16_t)(wCRC) >> 8) ^ wCRC_Table[((uint16_t)(wCRC) ^ (uint16_t)(chData)) & 0x00ff];
-        }
-        return wCRC;
-    }
+    // static uint16_t crc16check(const uint8_t *data, int length) {
+    //     uint8_t chData;
+    //     uint16_t wCRC = CRC16_INIT;
+    //     if (data == nullptr) {
+    //         return 0xFFFF;
+    //     }
+    //     while(length--) {
+    //         chData = *data++;
+    //         (wCRC) = ((uint16_t)(wCRC) >> 8) ^ wCRC_Table[((uint16_t)(wCRC) ^ (uint16_t)(chData)) & 0x00ff];
+    //     }
+    //     return wCRC;
+    // }
 
-    static uint16_t sum16check(const uint8_t *data, int length) {
-        uint16_t sumCheck = 0;
-        for (int i = 0; i < length; ++i) {
-            sumCheck += data[i];
-        }
-        return sumCheck;
-    }
+    // static uint16_t sum16check(const uint8_t *data, int length) {
+    //     uint16_t sumCheck = 0;
+    //     for (int i = 0; i < length; ++i) {
+    //         sumCheck += data[i];
+    //     }
+    //     return sumCheck;
+    // }
 }
 
 #endif //MSG_SERIALIZE_CHECK_H
