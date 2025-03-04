@@ -1,5 +1,5 @@
 Point myself
 Point[] enemy
 Point[] enemy_precise
-int8 myself_x
-int8 myself_y
+int32 myself_x
+int32 myself_y

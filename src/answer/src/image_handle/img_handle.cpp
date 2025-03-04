@@ -122,10 +122,6 @@ void ImageHandle::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) //
 
 void ImageHandle::find_pricise_point_unmove() //测试输出函数
 {
-    //要发布的信息：
-    //地图上不动点
-    //地图上移动的机器人
-    //地图概况
     if (!hasRun) {
         for (int i = 0; i < 5; i++) {
             cv::Mat Mask;
@@ -143,27 +139,32 @@ void ImageHandle::find_pricise_point_unmove() //测试输出函数
                 case 0: //绿色传送门
                     if (my_points[0].area > 500) //发布者录入信息
                     {
-                        map_unmove_point.green_in.x = my_points[0].point.x;
-                        map_unmove_point.green_in.y = my_points[0].point.y;
-                        map_unmove_point.green_out.x = my_points[1].point.x;
-                        map_unmove_point.green_out.y = my_points[1].point.y;
+                        std::cout<<my_points.size()<<std::endl;
+                        map_unmove_point.green_in.x = transform_abstract_point(my_points[0].point.x);
+                        map_unmove_point.green_in.y = transform_abstract_point(my_points[0].point.y);
+                        map_unmove_point.green_out.x = transform_abstract_point(my_points[1].point.x);
+                        map_unmove_point.green_out.y = transform_abstract_point(my_points[1].point.y);
+                    } else {
+                        map_unmove_point.green_in.x = transform_abstract_point(my_points[1].point.x);
+                        map_unmove_point.green_in.y = transform_abstract_point(my_points[1].point.y);
+                        map_unmove_point.green_out.x = transform_abstract_point(my_points[0].point.x);
+                        map_unmove_point.green_out.y = transform_abstract_point(my_points[0].point.y);
                     }
-                    map_unmove_point.green_in.x = my_points[1].point.x;
-                    map_unmove_point.green_in.y = my_points[1].point.y;
-                    map_unmove_point.green_out.x = my_points[0].point.x;
-                    map_unmove_point.green_out.y = my_points[0].point.y;
                     continue;
                 case 1: //紫色传送门
-                    if (my_points[0].area > 1000) {
-                        map_unmove_point.purple_in.x = my_points[0].point.x;
-                        map_unmove_point.purple_in.y = my_points[0].point.y;
-                        map_unmove_point.purple_out.x = my_points[1].point.x;
-                        map_unmove_point.purple_out.y = my_points[1].point.y;
+                    if (my_points[0].area > 500) {
+                        std::cout<<my_points.size()<<std::endl;
+                        map_unmove_point.purple_in.x = transform_abstract_point(my_points[0].point.x);
+                        map_unmove_point.purple_in.y = transform_abstract_point(my_points[0].point.y);
+                        map_unmove_point.purple_out.x = transform_abstract_point(my_points[1].point.x);
+                        map_unmove_point.purple_out.y = transform_abstract_point(my_points[1].point.y);
+                    } else {
+                        map_unmove_point.purple_in.x = transform_abstract_point(my_points[1].point.x);
+                        map_unmove_point.purple_in.y = transform_abstract_point(my_points[1].point.y);
+                        map_unmove_point.purple_out.x = transform_abstract_point(my_points[0].point.x);
+                        map_unmove_point.purple_out.y = transform_abstract_point(my_points[0].point.y);
                     }
-                    map_unmove_point.purple_in.x = my_points[1].point.x;
-                    map_unmove_point.purple_in.y = my_points[1].point.y;
-                    map_unmove_point.purple_out.x = my_points[0].point.x;
-                    map_unmove_point.purple_out.y = my_points[0].point.y;
+
                     continue;
                 case 2: //补给
                     // std::cout<<my_points[0].area<<std::endl;
@@ -183,6 +184,22 @@ void ImageHandle::find_pricise_point_unmove() //测试输出函数
                     map_unmove_point.password.x = transform_abstract_point(my_points[0].point.x);
                     map_unmove_point.password.y = transform_abstract_point(my_points[0].point.y);
                     continue;
+            }
+        }
+
+        cv::Point a,b;//用来判断那个是进去的
+        a.x=map_unmove_point.recover.x;
+        a.y=map_unmove_point.recover.y;
+        b.x=map_unmove_point.green_in.x;
+        b.y=map_unmove_point.green_in.y;
+        std::stack<cv::Point> my_;
+        my_=reflash_way(a,b);
+        if (  green_purple==-1) {
+            if (my_.empty()) {
+                map_unmove_point.green_or_purple=0;//等于1是紫色进
+            }
+            else {
+                map_unmove_point.green_or_purple=1;//等于0是紫色进
             }
         }
         hasRun = true;
@@ -215,18 +232,18 @@ void ImageHandle::reflesh_point() {
 
         switch (i) {
             case 5: //自己
+                map_move_point.myself_x = my_points_[0].point.x;
+                map_move_point.myself_y = my_points_[0].point.y;
                 map_move_point.myself.x = transform_abstract_point(my_points_[0].point.x);
                 map_move_point.myself.y = transform_abstract_point(my_points_[0].point.y);
                 myself.x = transform_abstract_point(my_points_[0].point.x);
                 myself.y = transform_abstract_point(my_points_[0].point.y);
                 RCLCPP_INFO(this->get_logger(), "(%d,%d)", myself.x, myself.y);
-                map_move_point.myself_x = my_points_[0].point.x;
-                map_move_point.myself_y = my_points_[0].point.y;
                 continue;
             case 6: //敌人
-                if (my_points_.size() == 1) {  }
-                else if ( my_points_.size() == 0 ) {}
-                else {
+                if (my_points_.size() == 1) {
+                } else if (my_points_.size() == 0) {
+                } else {
                     map_move_point.enemy.resize(my_points_.size() - 1);
                     map_move_point.enemy_precise.resize(my_points_.size() - 1);
                     // std::cout << transform_abstract_point(my_points_[1].point.x) << " " << transform_abstract_point(
@@ -247,6 +264,7 @@ void ImageHandle::reflesh_point() {
         }
     }
     Map_move_Point_->publish(map_move_point); //发布消息
+    RCLCPP_INFO(this->get_logger(), "(%d,%d)", map_move_point.myself_x, map_move_point.myself_y);
 }
 
 
@@ -265,7 +283,7 @@ std::vector<colcor_select::point_and_area> ImageHandle::getContours(const cv::Ma
     {
         colcor_select::point_and_area temp_contour;
         auto area = contourArea(contours[i]); //要返回面积以判断为入口还是出口
-        if (area > 300) {
+        if (area > 100) {
             double peri = arcLength(contours[i], true);
             approxPolyDP(contours[i], conPoly[i], 0.01 * peri, true);
             //std::cout << conPoly[0].size() << std::endl;

@@ -39,6 +39,7 @@ public:
             10,
             std::bind(&Algorithm::password_handle,this,std::placeholders::_1)
             );
+        Int64Pub=this->create_publisher<example_interfaces::msg::Int64>("password",10);
         PosePub=this->create_publisher<geometry_msgs::msg::Pose2D>("pose", 10);
         BoolPub = this->create_publisher<example_interfaces::msg::Bool>("shoot", 10);
         way_service_client=this->create_client<answer_infos::srv::WayService>("WayPoints");
@@ -49,11 +50,9 @@ public:
         robot_sub=this->create_subscription<answer_infos::msg::RobotLocation>("map",
             10,
             std::bind(&Algorithm::recieve_robot_location,this,std::placeholders::_1));
-        timer = this->create_wall_timer(std::chrono::milliseconds(1000),
+        timer = this->create_wall_timer(std::chrono::milliseconds(740),
                                          std::bind(&Algorithm::send_point, this)
         );
-        // control_timer = this->create_wall_timer(std::chrono::seconds(1),
-        //     std::bind(&Algorithm::move_control, this));
     }
 
 private:
@@ -62,7 +61,8 @@ private:
     rclcpp::Client<answer_infos::srv::WayService>::SharedPtr way_service_client;
     rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr PosePub; //移动
     rclcpp::Publisher<example_interfaces::msg::Bool>::SharedPtr BoolPub; //攻击
-    rclcpp::Subscription<example_interfaces::msg::Int64>::SharedPtr Int64Sub;
+    rclcpp::Subscription<example_interfaces::msg::Int64>::SharedPtr Int64Sub;//接受密码
+    rclcpp::Publisher<example_interfaces::msg::Int64>::SharedPtr Int64Pub;//发送密码
     rclcpp::TimerBase::SharedPtr timer;
     rclcpp::TimerBase::SharedPtr control_timer;
 
@@ -74,12 +74,20 @@ private:
     cv::Point decide_which_next();
 
     int num=0;
-    int q;
+    int decide_if_go_to_recover=0;
+    int decide_if_go_to_recover_again=0;
+    int green_or_purple_=1;
+    int has_in=0;//是否已经进入传送门
+    int has_gone_password=0;
+    int has_gone_out=0;
+    int if_can_destroy_base=0;
+    int decide_how_to_finish=0;
+    int aneme_size;
     int pause_condition=1;
     int count_=0;
-    long int password[3];
+    long int password[3];//要发送password[2]
     bool check_if_right(cv::Point targetPoint);
-    void fight();
+    void fight(int is_who);
     void password_handle(example_interfaces::msg::Int64 msg);
     void move(int dx, int dy ,double dtheta);
     void arrayInitialization();

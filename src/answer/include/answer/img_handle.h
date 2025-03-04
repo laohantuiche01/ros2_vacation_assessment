@@ -32,7 +32,7 @@ public:
         //std::thread(reflesh());
         //find_pricise_point_unmove();
         timer = this->create_wall_timer(
-            std::chrono::seconds(1),
+            std::chrono::milliseconds(500),
             std::bind(&ImageHandle::publish_try, this));
         //PosePub = this->create_publisher<geometry_msgs::msg::Pose2D>("pose", 10);
         //BoolPub = this->create_publisher<example_interfaces::msg::Bool>("shoot", 10);
@@ -66,6 +66,7 @@ private:
 
     static int transform_abstract_point(int location); //转换成粗略的坐标
     int mapPoint[32][16];
+    int green_purple=-1;
 
     void WayCallback(const answer_infos::srv::WayService::Request::SharedPtr request,
         const answer_infos::srv::WayService::Response::SharedPtr response);
