@@ -85,6 +85,7 @@ private:
     int aneme_size;
     int pause_condition=1;
     int count_=0;
+    int has_fire=0;
     long int password[3];//要发送password[2]
     bool check_if_right(cv::Point targetPoint);
     void fight(int is_who);

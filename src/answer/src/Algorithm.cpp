@@ -8,29 +8,29 @@ void Algorithm::move_control(std::queue<cv::Point> Point_queue_) {
     if (Points[7].x == Points[8].x && Points[7].y == Points[8].y) {
         move(0, 0, 0);
         fight(1);
-        Points[8].x=-1;
-        Points[8].y=-1;
+        Points[8].x = -1;
+        Points[8].y = -1;
     }
     if (Points[7].x == Points[9].x && Points[7].y == Points[9].y) {
         move(0, 0, 0);
         fight(2);
-        Points[9].x=-1;
-        Points[9].y=-1;
+        Points[9].x = -1;
+        Points[9].y = -1;
     } else {
         pause_condition = 1;
         while (Point_queue_.size() != 1 && pause_condition != 4) {
             if (Points[7].x == Points[8].x && Points[7].y == Points[8].y) {
                 move(0, 0, 0);
                 fight(1);
-                Points[8].x=-1;
-                Points[8].y=-1;
+                Points[8].x = -1;
+                Points[8].y = -1;
                 break;
             }
             if (Points[7].x == Points[9].x && Points[7].y == Points[9].y) {
                 move(0, 0, 0);
                 fight(2);
-                Points[9].x=-1;
-                Points[9].y=-1;
+                Points[9].x = -1;
+                Points[9].y = -1;
                 break;
             }
             pause_condition++;
@@ -58,7 +58,7 @@ void Algorithm::move_control(std::queue<cv::Point> Point_queue_) {
                 {
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(220));
+            std::this_thread::sleep_for(std::chrono::milliseconds(210));
         }
         move(1, 0, 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -77,11 +77,11 @@ void Algorithm::fight(int is_who) {
     dx = pricise[is_who].x - pricise[0].x;
     dy = pricise[is_who].y - pricise[0].y;
     double theta = atan2(dy, dx);
-    move(0,0,theta);
+    move(0, 0, theta);
     while (num_ji != 2) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
         num_ji++;
         BoolPub->publish(fire);
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
 
@@ -111,7 +111,7 @@ void Algorithm::arrayInitialization() //数组的初始化
 void Algorithm::recieve_map_point(answer_infos::msg::MapPoint::SharedPtr msg) //接受不动点信息
 {
     green_or_purple_ = msg->green_or_purple;
-    Points[0].x = msg->destination.x-2;
+    Points[0].x = msg->destination.x - 2;
     Points[0].y = msg->destination.y;
     Points[1].x = msg->recover.x;
     Points[1].y = msg->recover.y;
@@ -160,7 +160,6 @@ void Algorithm::send_point() //发送给处理器的
     while (!way_service_client->wait_for_service(std::chrono::seconds(1))) {
         RCLCPP_INFO(this->get_logger(), "wait_for_service failed");
     }
-    //RCLCPP_INFO(this->get_logger(), "wait_for_service success");
 
     auto request = std::make_shared<answer_infos::srv::WayService::Request>();
     request->input_point.resize(2);
@@ -187,7 +186,8 @@ cv::Point Algorithm::decide_which_next() {
             if (Points[7].x == Points[1].x && Points[7].y == Points[1].y) //到了变换条件
             {
                 decide_if_go_to_recover = 1;
-            } else {
+            }
+            if (decide_if_go_to_recover == 0) {
                 RCLCPP_INFO(this->get_logger(), "first to recover");
                 return Points[1]; //回到治疗点
             }
@@ -197,73 +197,81 @@ cv::Point Algorithm::decide_which_next() {
     }
     if (aneme_size == 0) //没敌人了
     {
-        if (decide_if_go_to_recover_again==0) {
+        if (decide_if_go_to_recover_again == 0) {
             if (Points[7].x == Points[1].x && Points[7].y == Points[1].y) {
                 decide_if_go_to_recover_again = 1;
-            }
-            else {
+            } else {
                 RCLCPP_INFO(this->get_logger(), "second to recover");
                 return Points[1];
             }
         }
-        if (has_in == 0) //是否已经进传送门
-        {
-            if (green_or_purple_ == 0) //紫色进
+        if (decide_if_go_to_recover_again == 1) {
+            if (has_in == 0) //是否已经进传送门
             {
-                if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) has_in = 1; //是否到达了
-                if (has_in == 0) {
-                    RCLCPP_INFO(this->get_logger(), "go to pur_in");
-                    return Points[5]; //没到的话，返回pur in坐标
-                }
-            } else if (green_or_purple_ == 1) //绿色进
-            {
-                if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) has_in = 1; //是否到达了
-                if (has_in == 0) {
-                    RCLCPP_INFO(this->get_logger(), "go to gre_in");
-                    return Points[3]; //没到的话，返回gre in坐标
-                }
-            }
-        }
-        if (has_in == 1) //已经进传送门
-        {
-            if (has_gone_password == 0) //还没到密码
-            {
-                if (Points[7].x == Points[2].x && Points[7].y == Points[2].y) {
-                    has_gone_password = 1;
-                    example_interfaces::msg::Int64 temp ;
-                    temp.data=password[2];
-                    Int64Pub->publish(temp);
-                    RCLCPP_INFO(this->get_logger(), "password changed");
-                }
-                if (has_gone_password == 0) {
-                    RCLCPP_INFO(this->get_logger(), "go to password");
-                    return Points[2]; //如果没到，就返回其值
-                }
-            }
-            if (has_gone_password == 1)//到过密码
-            {
-                if (has_gone_out == 0) //每到过出口
+                if (green_or_purple_ == 0) //紫色进
                 {
-                    if (green_or_purple_ == 0) //绿色出
-                    {
-                        if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) has_gone_out = 1; //是否到达了
-                        if (has_gone_out == 0) {
-                            RCLCPP_INFO(this->get_logger(), "go to gre_out");
-                            return Points[3]; //没到的话，返回pur in坐标
-                        }
-                    } else if (green_or_purple_ == 1) //紫色出
-                    {
-                        if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) has_gone_out = 1; //是否到达了
-                        if (has_gone_out == 0) {
-                            RCLCPP_INFO(this->get_logger(), "go to pur_out");
-                            return Points[5]; //没到的话，返回gre in坐标
-                        }
+                    if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) has_in = 1; //是否到达了
+                    if (has_in == 0) {
+                        RCLCPP_INFO(this->get_logger(), "go to pur_in");
+                        return Points[5]; //没到的话，返回pur in坐标
+                    }
+                } else if (green_or_purple_ == 1) //绿色进
+                {
+                    if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) has_in = 1; //是否到达了
+                    if (has_in == 0) {
+                        RCLCPP_INFO(this->get_logger(), "go to gre_in");
+                        return Points[3]; //没到的话，返回gre in坐标
                     }
                 }
-                if (has_gone_out == 1) {
-                    RCLCPP_INFO(this->get_logger(), "go to basic");
-                    if_can_destroy_base=1;
-                    return Points[0];
+            } else if (has_in == 1) //已经进传送门
+            {
+                if (has_gone_password == 0) //还没到密码
+                {
+                    if (Points[7].x == Points[2].x && Points[7].y == Points[2].y) {
+                        has_gone_password = 1;
+                        example_interfaces::msg::Int64 temp;
+                        temp.data = password[2];
+                        Int64Pub->publish(temp);
+                        RCLCPP_INFO(this->get_logger(), "password changed");
+                    } else if (has_gone_password == 0) {
+                        RCLCPP_INFO(this->get_logger(), "go to password");
+                        return Points[2]; //如果没到，就返回其值
+                    }
+                }
+                if (has_gone_password == 1) //到过密码
+                {
+                    if (has_gone_out == 0) //每到过出口
+                    {
+                        if (green_or_purple_ == 0) //绿色出
+                        {
+                            if (Points[7].x == Points[3].x && Points[7].y == Points[3].y) has_gone_out = 1; //是否到达了
+                            if (has_gone_out == 0) {
+                                RCLCPP_INFO(this->get_logger(), "go to gre_out");
+                                return Points[3]; //没到的话，返回pur in坐标
+                            }
+                        } else if (green_or_purple_ == 1) //紫色出
+                        {
+                            if (Points[7].x == Points[5].x && Points[7].y == Points[5].y) has_gone_out = 1; //是否到达了
+                            if (has_gone_out == 0) {
+                                RCLCPP_INFO(this->get_logger(), "go to pur_out");
+                                return Points[5]; //没到的话，返回gre in坐标
+                            }
+                        }
+                    } else if (has_gone_out == 1) {
+                        if (Points[7].x == Points[0].x && Points[7].y == Points[0].y) {
+                            RCLCPP_INFO(this->get_logger(), "has reach the basic");
+                            if (has_fire <= 8) {
+                                move(0, 0, 0);
+                                example_interfaces::msg::Bool fire;
+                                fire.data = true;
+                                BoolPub->publish(fire);
+                                has_fire ++;
+                            }
+                        } else {
+                            RCLCPP_INFO(this->get_logger(), "go to basic");
+                            return Points[0];
+                        }
+                    }
                 }
             }
         }
@@ -295,7 +303,7 @@ void Algorithm::password_handle(example_interfaces::msg::Int64 msg) //处理pass
     RCLCPP_INFO(this->get_logger(), "password[%ld]--------------------------------------", password[count_]);
     count_++;
     if (count_ == 2) {
-        password[2]=password[1]+password[0];
+        password[2] = password[1] + password[0];
     }
 }
 
