@@ -86,7 +86,7 @@ void Algorithm::fight(int is_who) {
     double theta = atan2(dy, dx);
     move(0, 0, theta);
     while (num_ji != 2) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        std::this_thread::sleep_for(std::chrono::milliseconds(140));
         num_ji++;
         BoolPub->publish(fire);
     }
@@ -204,9 +204,9 @@ cv::Point Algorithm::decide_which_next() {
     }
     if (aneme_size == 0) //没敌人了
     {
-        if (decide_if_go_to_recover_again == 0) {
+        if (decide_if_go_to_recover== 0) {
             if (Points[7].x == Points[1].x && Points[7].y == Points[1].y) {
-                decide_if_go_to_recover_again = 1;
+                decide_if_go_to_recover = 1;
             } else {
                 //RCLCPP_INFO(this->get_logger(), "second to recover");
                 return Points[1];
@@ -240,10 +240,9 @@ cv::Point Algorithm::decide_which_next() {
                 {
                     if (Points[7].x == Points[2].x && Points[7].y == Points[2].y) {
                         has_gone_password = 1;
-                        my_serial = std::move(robot::RobotSerial("/dev/pts/3",115200));
+                        my_serial = std::move(robot::RobotSerial("/dev/pts/2",115200));
                         my_serial.write(0x01,password_send{password[2]});
                         std::cout<<password[2]<<std::endl;
-                        //RCLCPP_INFO(this->get_logger(), "password changed");
                     } else if (has_gone_password == 0) {
                         //RCLCPP_INFO(this->get_logger(), "go to password");
                         return Points[2]; //如果没到，就返回其值

@@ -22,9 +22,6 @@ include_directories(include msg_serializer thirdparty/serialib)
 
 add_subdirectory(thirdparty/serialib)
 
-ament_auto_add_executable(example_test src/test.cpp)
-target_link_libraries(example_test serialib ${OpenCV_LIBS} )
-
 ament_auto_add_executable(${PROJECT_NAME}_img src/image_handle/img_handle.cpp)
 target_link_libraries(${PROJECT_NAME}_img serialib ${OpenCV_LIBS} )
 
@@ -43,5 +40,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_auto_package()
+ament_auto_package(
+        INSTALL_TO_SHARE
+        launch)
 

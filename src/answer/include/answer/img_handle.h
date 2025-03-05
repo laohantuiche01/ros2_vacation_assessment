@@ -30,7 +30,7 @@ public:
             std::bind(&ImageHandle::imageCallback, this, std::placeholders::_1) //回调函数
         );
         timer = this->create_wall_timer(
-            std::chrono::milliseconds(250),
+            std::chrono::milliseconds(500),
             std::bind(&ImageHandle::publish_try, this));
         Map_unmove_Point_ = this->create_publisher<answer_infos::msg::MapPoint>("MapPoints", 10);
         Map_move_Point_ = this->create_publisher<answer_infos::msg::RobotLocation>("map", 10);
